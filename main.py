@@ -21,11 +21,11 @@ def get_links(last_url):
   link_list = []
   for i in range(0,1000): # assuming 1000 pages of this stuff, which there's clearly not
     url = "https://www.nytco.com/wp/wp-admin/admin-ajax.php"
-    print(url)
+    #print(url)
     headers = json.loads(os.getenv("HEADERS"))
-    print(headers)
+    #print(headers)
     cookies = json.loads(os.getenv("HASH"))
-    print(cookies)
+    #print(cookies)
     data = {
         "action": "filter_posts",
         "filter": "0",

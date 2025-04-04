@@ -57,6 +57,22 @@ def pullstory(url):
     paragraphs.append(graph.text.strip())
   return ' '.join(paragraphs)
 
+def schemaCrawler(soup):
+    return json.loads(soup.find_all("script", type="application/ld+json")[0].contents[0])
+
+def pullSchema(url, itemName):
+  r = requests.get(url)
+  soup = BeautifulSoup(r.text, 'html.parser')
+  try:
+    item = schemaCrawler(soup)['@graph'][-1][itemName]
+    #print(item)
+    if itemName in ['datePublished', 'dateModified']:
+      item = pd.to_datetime(item).strftime("%Y-%m-%d %H:%M:%S")
+  except:
+    item = None
+  return item
+
+
 if __name__ in "__main__":
     df2 = pd.read_csv('nyt_urls_with_paragraphs.csv')
     print(f"{len(df2)} items!")
@@ -66,6 +82,9 @@ if __name__ in "__main__":
     nyt_links = get_links(last_url)
     df['urls'] = pd.Series(nyt_links)
     df['fullText'] = df['urls'].apply(lambda x:pullstory(x))
+    df['storyTitle'] = df['urls'].apply(lambda x:pullSchema(x,'name'))
+    df['datePublished'] = df['urls'].apply(lambda x:pullSchema(x,'datePublished'))
+    df['dateModified'] = df['urls'].apply(lambda x:pullSchema(x,'dateModified'))
     print(f"{len(df)} new press releases on this run!")
     df3 = pd.concat([df2, df])
     df3.to_csv('nyt_urls_with_paragraphs.csv',index=False)

@@ -20,7 +20,7 @@ def get_links():
   """
   link_list = []
   for i in range(0,1000): # assuming 1000 pages of this stuff, which there's clearly not
-    url = os.getenv("AJAX")
+    url = "https://www.nytco.com/wp/wp-admin/admin-ajax.php"
     print(url)
     headers = json.loads(os.getenv("HEADERS"))
     print(headers)

@@ -39,3 +39,14 @@ jobs:
           HASH: ${{ secrets.HASH }}
           AJAX: ${{ secrets.AJAX }}
         run: python main.py
+
+      - name: Commit the changes
+        run: |-
+          git config user.name "Automated"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          timestamp=$(date -u)
+          git commit -m "Latest data: ${timestamp}" &&
+            export COMMIT_HASH=$(git rev-parse HEAD) &&
+            exit 0
+          git push

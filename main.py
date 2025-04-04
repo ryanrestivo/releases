@@ -21,8 +21,11 @@ def get_links():
   link_list = []
   for i in range(0,1000): # assuming 1000 pages of this stuff, which there's clearly not
     url = os.getenv("AJAX")
+    print(url)
     headers = json.loads(os.getenv("HEADERS"))
+    print(headers)
     cookies = json.loads(os.getenv("HASH"))
+    print(cookies)
     data = {
         "action": "filter_posts",
         "filter": "0",
@@ -30,8 +33,7 @@ def get_links():
         "post_id": "73",
         "isLoadingMore": "true"
     }
-    print(headers)
-    print(cookies)
+    print(data)
     response = requests.post(url, headers=headers, cookies=cookies, data=data)
     print(response.status_code)
     if response.status_code != 200:

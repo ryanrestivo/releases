@@ -8,7 +8,6 @@ import os
 # https://drnews.substack.com/p/claude-youre-going-to-blow-us-all?utm_source=post-email-title&publication_id=1543102&post_id=154501431&utm_campaign=email-post-title&isFreemail=true&r=qj5c&triedRedirect=true
 
 
-df = pd.DataFrame() 
 
 
 
@@ -31,6 +30,8 @@ def get_links():
         "post_id": "73",
         "isLoadingMore": "true"
     }
+    print(headers)
+    print(cookies)
     response = requests.post(url, headers=headers, cookies=cookies, data=data)
     print(response.status_code)
     if response.status_code != 200:
@@ -58,6 +59,7 @@ def pullstory(url):
   return ' '.join(paragraphs)
 
 if __name__ in "__main__":
+    df = pd.DataFrame()
     nyt_links = get_links()
     df['urls'] = pd.Series(nyt_links)
     df['fullText'] = df['urls'].apply(lambda x:pullstory(x))

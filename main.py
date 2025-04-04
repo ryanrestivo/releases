@@ -57,6 +57,20 @@ def pullstory(url):
     paragraphs.append(graph.text.strip())
   return ' '.join(paragraphs)
 
+def schemaCrawler(soup):
+    return json.loads(soup.find_all("script", type="application/ld+json")[0].contents[0])
+
+def pullSchema(url, itemName):
+  r = requests.get(url)
+  soup = BeautifulSoup(r.text, 'html.parser')
+  try:
+    item = schemaCrawler(soup)['@graph'][-1][itemName]
+    print(item)
+  except:
+    item = None
+  return item
+
+
 if __name__ in "__main__":
     df2 = pd.read_csv('nyt_urls_with_paragraphs.csv')
     print(f"{len(df2)} items!")

@@ -11,7 +11,7 @@ import os
 
 
 
-def get_links():
+def get_links(last_url):
   """
   how you get all this is to look in the Network tab in Chrome and when you "Load More" it makes this request... which I found page 2...
   When you hit the "Load More" you can see when the request happens (in microseconds) and then find it
@@ -38,14 +38,13 @@ def get_links():
     print(response.status_code)
     if response.status_code != 200:
       break
-    #print(response.text)
     response_text = response.text
     # use bs4 to parse the page for links
     soup = BeautifulSoup(response_text, 'html.parser')
     for link in soup.find_all('a', href=True):
       link = link['href'].replace('\\', '').replace('"', '')
       link_list.append(link)
-      if link == os.getenv("FIRST_RELEASE"):
+      if link == last_url:
         print(f"done on page {i}")
         break
   return link_list
@@ -61,8 +60,12 @@ def pullstory(url):
   return ' '.join(paragraphs)
 
 if __name__ in "__main__":
+    df2 = pd.read_csv('nyt_urls_with_paragraphs.csv')
+    last_url = df2.iloc[0]['urls']
     df = pd.DataFrame()
-    nyt_links = get_links()
+    nyt_links = get_links(last_url)
     df['urls'] = pd.Series(nyt_links)
     df['fullText'] = df['urls'].apply(lambda x:pullstory(x))
-    df.to_csv('nyt_urls_with_paragraphs.csv',index=False)
+    print(f"{len(df)} new press releases on this run!")
+    df3 = pd.concat([df2, df])
+    df3.to_csv('nyt_urls_with_paragraphs.csv',index=False)

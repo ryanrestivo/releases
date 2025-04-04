@@ -6,7 +6,7 @@ on:
   #  - cron: "0 0 * * *" # every midnight GMT
 
 jobs:
-  spacy_job:
+  releases:
     runs-on: ubuntu-latest
 
     steps:

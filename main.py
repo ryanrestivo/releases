@@ -47,6 +47,8 @@ def get_links(last_url):
       if link == last_url:
         print(f"done on page {i}")
         break
+    if link == last_url:
+      break
   return link_list
 
 def pullstory(url):
@@ -61,11 +63,14 @@ def pullstory(url):
 
 if __name__ in "__main__":
     df2 = pd.read_csv('nyt_urls_with_paragraphs.csv')
+    print(f"{len(df2)} items!")
     last_url = df2.iloc[0]['urls']
+    # wrap this in a try in case no data
     df = pd.DataFrame()
     nyt_links = get_links(last_url)
     df['urls'] = pd.Series(nyt_links)
     df['fullText'] = df['urls'].apply(lambda x:pullstory(x))
     print(f"{len(df)} new press releases on this run!")
     df3 = pd.concat([df2, df])
+      
     df3.to_csv('nyt_urls_with_paragraphs.csv',index=False)

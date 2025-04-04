@@ -5,9 +5,9 @@ from bs4 import BeautifulSoup
 import os
 
 
-# https://drnews.substack.com/p/claude-youre-going-to-blow-us-all?utm_source=post-email-title&publication_id=1543102&post_id=154501431&utm_campaign=email-post-title&isFreemail=true&r=qj5c&triedRedirect=true
-
-
+# "https://drnews.substack.com/p/claude-youre-going-to-blow-us-all?utm_source=post-email-title&publication_id=1543102&post_id=154501431&utm_campaign=email-post-title&isFreemail=true&r=qj5c&triedRedirect=true
+# " I was able to get the first 25 stories scraped, but couldn’t do anything historic."
+# Let's fix that... Using the inspector on this page, found the AJAX calls made, use these to fetch the data
 
 
 

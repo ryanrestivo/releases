@@ -21,11 +21,8 @@ def get_links(last_url):
   link_list = []
   for i in range(0,1000): # assuming 1000 pages of this stuff, which there's clearly not
     url = "https://www.nytco.com/wp/wp-admin/admin-ajax.php"
-    #print(url)
     headers = json.loads(os.getenv("HEADERS"))
-    #print(headers)
     cookies = json.loads(os.getenv("HASH"))
-    #print(cookies)
     data = {
         "action": "filter_posts",
         "filter": "0",
@@ -33,9 +30,7 @@ def get_links(last_url):
         "post_id": "73",
         "isLoadingMore": "true"
     }
-    print(data)
     response = requests.post(url, headers=headers, cookies=cookies, data=data)
-    print(response.status_code)
     if response.status_code != 200:
       break
     response_text = response.text
@@ -43,10 +38,11 @@ def get_links(last_url):
     soup = BeautifulSoup(response_text, 'html.parser')
     for link in soup.find_all('a', href=True):
       link = link['href'].replace('\\', '').replace('"', '')
-      link_list.append(link)
       if link == last_url:
         print(f"done on page {i}")
         break
+      else:
+        link_list.append(link)
     if link == last_url:
       break
   return link_list
@@ -56,7 +52,7 @@ def pullstory(url):
   r = requests.get(url)
   soup = BeautifulSoup(r.text, 'html.parser')
   paragraphs = []
-  # find any paragraph on the page, then make them one big text box
+  # find any paragraph on the page, then make them one big text string
   for graph in soup.find_all('p'):
     paragraphs.append(graph.text.strip())
   return ' '.join(paragraphs)
@@ -72,5 +68,4 @@ if __name__ in "__main__":
     df['fullText'] = df['urls'].apply(lambda x:pullstory(x))
     print(f"{len(df)} new press releases on this run!")
     df3 = pd.concat([df2, df])
-      
     df3.to_csv('nyt_urls_with_paragraphs.csv',index=False)

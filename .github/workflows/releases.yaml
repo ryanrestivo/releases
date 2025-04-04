@@ -2,8 +2,8 @@ name: Get Releases
 
 on:
   workflow_dispatch:
-  #schedule:
-  #  - cron: "0 0 * * *" # every midnight GMT
+  schedule:
+    - cron: "0 0 * * *" # every midnight GMT
 
 jobs:
   releases:

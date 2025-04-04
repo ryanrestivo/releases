@@ -65,7 +65,9 @@ def pullSchema(url, itemName):
   soup = BeautifulSoup(r.text, 'html.parser')
   try:
     item = schemaCrawler(soup)['@graph'][-1][itemName]
-    print(item)
+    #print(item)
+    if itemName in ['datePublished', 'dateModified']:
+      item = pd.to_datetime(item).strftime("%Y-%m-%d %H:%M:%S")
   except:
     item = None
   return item

@@ -33,7 +33,7 @@ jobs:
         env:
           PIP_CACHE_DIR: ~/.cache/pip
 
-      - name: Run SpaCy Script
+      - name: Run Script
         env:
           HEADERS: ${{ secrets.HEADERS }}
           HASH: ${{ secrets.HASH }}

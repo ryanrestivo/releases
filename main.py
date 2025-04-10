@@ -87,4 +87,6 @@ if __name__ in "__main__":
     df['dateModified'] = df['urls'].apply(lambda x:pullSchema(x,'dateModified'))
     print(f"{len(df)} new press releases on this run!")
     df3 = pd.concat([df2, df])
-    df3.to_csv('nyt_urls_with_paragraphs.csv',index=False)
+    df3 = df3.drop_duplicates() # drop the dupes
+    # pump out the new CSV
+    df3.sort_values('datePublished',ascending=False).to_csv('nyt_urls_with_paragraphs.csv',index=False)

@@ -43,8 +43,8 @@ def get_links(last_url):
         break
       else:
         link_list.append(link)
-    if link == last_url:
-      break
+      if link == last_url:
+        break
   return link_list
 
 def pullstory(url):
@@ -77,9 +77,12 @@ if __name__ in "__main__":
     df2 = pd.read_csv('nyt_urls_with_paragraphs.csv')
     print(f"{len(df2)} items!")
     last_url = df2.iloc[0]['urls']
+    print(last_url)
     # wrap this in a try in case no data
     df = pd.DataFrame()
     nyt_links = get_links(last_url)
+    print("\n\n\n\n\n\n\n")
+    print(nyt_links)
     df['urls'] = pd.Series(nyt_links)
     df['fullText'] = df['urls'].apply(lambda x:pullstory(x))
     df['storyTitle'] = df['urls'].apply(lambda x:pullSchema(x,'name'))

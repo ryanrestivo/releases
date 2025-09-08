@@ -10,6 +10,59 @@ import os
 # Let's fix that... Using the inspector on this page, found the AJAX calls made, use these to fetch the data
 
 
+### NYT Decides to redesign their press releases page in July
+### NEW CODE
+
+def get_new_page():
+  response = requests.get('https://www.nytco.com/press/all-announcements/')
+  response_text = response.text
+  soup = BeautifulSoup(response_text, 'html.parser')
+  articles = soup.find_all('article', class_='press-post')
+  data = pd.DataFrame()
+  urls = []
+  titles = []
+  text = []
+  pub_times = []
+  mod_time = []
+  for article in articles:
+      date = article.get('data-date')
+      url = article.select_one('.press-text a')['href']
+      title = article.select_one('.press-text h4 a span').text.strip()
+      urls.append(url)
+      titles.append(title)
+      z = requests.get(url)
+      url_data = BeautifulSoup(z.text, 'html.parser')
+      main_content = url_data.find('div', class_='js-content-fade')
+      paragraphs = main_content.find_all('p')
+      parse_data = BeautifulSoup(z.text, 'lxml')
+      meta_tag = parse_data.select_one('meta[property="article:published_time"]')
+      if meta_tag:
+        published_time = meta_tag.get("content")
+        pub_times.append(published_time)
+      else:
+        pub_times.append(None)
+      mod_tag = parse_data.select_one('meta[property="article:modified_time"]')
+      if mod_tag:
+        modify_time = mod_tag.get("content")
+        mod_time.append(modify_time)
+      else:
+        mod_time.append(None)
+      story_text = []
+      for i, p in enumerate(paragraphs, 1):
+          story_text.append(f"{p.get_text()}")
+      text.append(f"{''.join(story_text)}")
+  data['urls'] = pd.Series(urls)
+  data['fullText'] = pd.Series(text)
+  data['storyTitle'] = pd.Series(titles)
+  data['datePublished'] = pd.Series(pub_times)
+  data['dateModified'] = pd.Series(mod_time)
+  return data
+
+
+
+
+
+### ORIGINAL CODE 
 
 def get_links(last_url):
   """
@@ -78,16 +131,7 @@ if __name__ in "__main__":
     print(f"{len(df2)} items!")
     last_url = df2.iloc[0]['urls']
     print(last_url)
-    # wrap this in a try in case no data
-    df = pd.DataFrame()
-    nyt_links = get_links(last_url)
-    print("\n\n\n\n\n\n\n")
-    print(nyt_links)
-    df['urls'] = pd.Series(nyt_links)
-    df['fullText'] = df['urls'].apply(lambda x:pullstory(x))
-    df['storyTitle'] = df['urls'].apply(lambda x:pullSchema(x,'name'))
-    df['datePublished'] = df['urls'].apply(lambda x:pullSchema(x,'datePublished'))
-    df['dateModified'] = df['urls'].apply(lambda x:pullSchema(x,'dateModified'))
+    df = get_new_page() # fetch all releases from page one
     print(f"{len(df)} new press releases on this run!")
     df3 = pd.concat([df2, df])
     df3 = df3.drop_duplicates() # drop the dupes

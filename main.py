@@ -137,3 +137,4 @@ if __name__ in "__main__":
     df3 = df3.drop_duplicates() # drop the dupes
     # pump out the new CSV
     df3.sort_values('datePublished',ascending=False).to_csv('nyt_urls_with_paragraphs.csv',index=False)
+    df3.sort_values('dateModified', ascending=False).drop_duplicates(subset='storyTitle', keep='first').to_csv('nyt_urls_with_paragraphs_removed_duplicates.csv',index=False)

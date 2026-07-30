@@ -1,0 +1,57 @@
+{
+  "category_examples": {
+    "staff annoucement": 64,
+    "fact check": 4,
+    "feature": 1,
+    "company update": 7,
+    "statement": 1,
+    "award": 4
+  },
+  "type_examples": {
+    "newsroom": 59,
+    "other/don't know": 8,
+    "opinion": 4,
+    "cooking": 1,
+    "audio": 5,
+    "games": 3,
+    "the athletic": 1
+  },
+  "controversial_Y_titles": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "relevant_Y_titles": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ]
+}

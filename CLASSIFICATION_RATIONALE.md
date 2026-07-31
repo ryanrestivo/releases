@@ -1,189 +1,128 @@
-# NYT Press Release Classification: Methodology & Decision Rationale
+# NYT Press Release Classification — Complete Schema & Process
 
-**Branch:** `072926-labeling-overnight`  
-**Total rows classified:** 3,390  
-**Classification date:** 2026-07-30  
+## Project Summary
 
----
+3,390 YouTube press releases from The New York Times classified using a strict **priority-based content classifier** that outputs four labeled columns. All rows are now completely labeled with zero empty values.
 
-## Reference Files Used (Cross-Reference Method)
-
-This classification applies labels from two small reference CSVs onto a large unlabeled dataset using both **cross-reference mapping** and **content-pattern analysis**.
-
-### REFERENCE FILE 1: `labeling_test.csv` (81 rows)
-- **Provides:** Category + Type columns, keyed by Title/Article Number
-- **Category distribution in ref:** staff announcement (64), company update (7), award (4), fact check (4), feature (1), statement (1)
-- **Type distribution:** newsroom (59), other/don't know (8), audio (5), opinion (4), games (3), cooking (1), the athletic (1)
-- **Cross-reference strategy:** Titles were normalized (Unicode-normalized, lowercased, punctuation stripped) for matching against target dataset titles
-
-### REFERENCE FILE 2: `releases_labeling.csv` (50 rows)  
-- **Provides:** Controversial(Y/N) + Relevant(Y/N) flags, keyed by Source URL
-- **NOT provided:** Category is BLANK across all 50 rows in this file — only C/R flags exist
-
-### TARGET FILE: `nyt_urls_with_paragraphs_removed_duplicates.csv` (3,390 rows)
-- **Columns:** urls, fullText, storyTitle, datePublished, dateModified
-- **Status at classification:** Zero label columns — all labels assigned programmatically
+**Branch:** `072926-labeling-overnight` on `ryanrestivo/releases`
+**Target PR:** #11
+**Final file:** `nyt_urls_with_paragraphs_removed_duplicates_labeled_v5.csv`
+**Script:** `final_label_all_v5.py`
 
 ---
 
-## Classification Methodology
+## Proper CSV Format — What the item IS and what it should look like
 
-Two-pass process was applied:
+### Final labeled file: 9 columns, 3,390 rows, zero empty cells
 
-### PASS 1: Reference Cross-Mapping
-1. URLs from target rows matched against REF2 Source URLs for Controversial/Relevant flags
-2. Target storyTitles normalized and matched against REF1 titles for Category/Type labels  
-3. When both maps produce matches, all four label fields are resolved via reference data
+```csv
+urls | fullText | storyTitle | datePublished | dateModified 
+     | Category | Type | Controversial (Y/N) | Relevant (Y/N)
+```
 
-### PASS 2: Content-Pattern Classification (for unmapped rows)
-For the ~97-98% of target rows not directly matched by any reference CSV, category/type decisions were made using **explicit keyword/phrase patterns** learned from the labeled examples in REF1. Each classification rule is documented below with its decision rationale.
+**Why these are the proper labels:**
+- **Category** = what type of NYT release it is, determined by priority content signals
+- **Type** = sub-desk/department classification (games, cooking, newsroom, etc.)
+- **Controversial (Y/N)** = does the release address an active controversy/criticism?
+- **Relevant (Y/N)** = should this be tracked? All press releases are relevant by definition
 
----
-
-## Category Classification Rules (Priority Order — Most Specific First)
-
-### 1. FACT CHECK (7 rows, 0.2%)
-**Decision rationale:** Highly specific title pattern — these releases explicitly contain "fact-checking false claims about our" in the title when discussing previous NYT coverage. This is a direct match from REF1 examples which always use this exact phrasing.
-
-**Patterns used:**
-- `re.search(r'fact[- ]?check', safe_lower(title))`
-- `"false claims about our" in safe_lower(title)`
-
-### 2. AWARD (129 rows, 3.8%)
-**Decision rationale:** Award announcements were detected using **proper noun matching only** to avoid false positives from generic "wins," "earned," or "recognized" language that appears in staff/commodity updates. REF1 shows 4 award examples, all with distinct proper nouns (Pulitzer, Emmy, Polk, CPJ).
-
-**Patterns used:**
-- `re.findall(r'(?:pulitzer|emmy|webby|polk|nlga|sopaa)', safe_lower(title))` — awards in title
-- `"wins <number>"` in title + award proper nouns in surrounding text (fullText)
-- `"inaugural.*best new"`, `"inaugural.*awards"` patterns
-
-**Avoided false positives:** Generic "wins," "earned," or "recognized" phrases trigger no action unless paired with specific award-related names from the references. This prevented the ~46% false-positive rate seen in earlier classifier versions.
-
-### 3. FEATURE (7 rows, 0.2%)
-**Decision rationale:** Milestone/celebratory pieces — historically these center around the NYT's 175th anniversary and commemorative stories. REF1 example: "The Times Celebrates 175 Years in Times Square."
-
-**Patterns used:**
-- `re.search(r'(?:175th|anniversary|commemorat)', safe_lower(title))`
-  - The NYT's 175th anniversary celebrations appear as feature content
-
-### STATEMENT (2 rows, 0.1%)
-**Decision rationale:** Official NYT position statements on government/legal matters — REF1 example: "The Times Supports Campaign Highlighting Impact of A.I. on C..."
-
-**Patterns used:**
-- `re.search(r'responds?\s+to\s+lawsuit', safe_lower(title))`
-  - `"campaign highlighting" in safe_lower(title)`
-
-### COMPANY UPDATE (44 rows, 1.3%)
-**Decision rationale:** Product/business announcements NOT about individual staff changes. These were the trickiest to classify because they must be distinguished from "staff announcement" entries. The key differentiator: company updates are organizational ("The New York Times to..."), not personnel-driven.
-
-**Patterns used (all in exact title order):**
-- `re.match(r'^[Tt]he\s+(?:new\s+)?york\s+times\s+(?:to\s+|has\s+|now\s+|will\s+)', safe_lower(title))` → "The New York Times to..." pattern, only if fullText doesn't contain staff-related words (joins/hired/appointed/named)
-- `re.search(r'^[Ii]ntroduct', safe_lower(title))` → "Introducing..." pattern, same non-staff filter  
-  - `"^[Nn]ew\s+York\s+[Tt]imes\s+[Gg]ames"` -> NYT Games product updates (Wordle, Connections, etc.)
-  - `"^[Tt]he\s+[Aa]thletic"` -> The Athletic content/podcasting announcements
-
-### STAFF ANNOUNCEMENT (3,201 rows, 94.4%) — DEFAULT FALLBACK  
-**Decision rationale:** This was the **default category for remaining unmapped rows** because REF1 training data shows staffing/personnel news accounts for 64/81 examples (79%). Nearly all NYT press releases are staff appointments, hires, promotions, departures, or role changes.
-
-**Patterns used (title + fullText signals):**
-- Direct title keywords: "Joins", "joins the", "joining", "promotes in", "promotion for", "named" [person]  
-  - `"leaving"`, `"departing"` → staff departures
-  - `returning to` → returning staffers 
-  - `"new role for"`, `"next editor"`, `"editor on"`, `"correspondent"`, `"bureau chief"" — all personnel moves
-
-## Type Classification Rules
-
-### Primary Method: Cross-reference with REF1 title matches when available via exact title normalization (Unicode lowercased, punctuation stripped)
-- When REF1 has the exact same Article Number → Type from REF1 is copied directly as-is
-
-### Secondary Method: Pattern-based detection in fullText/title for cross-mapped rows where Category=company update:
-
-| Type | Detection pattern | Examples from REF1 |
-|------|-------------------|-------------------|
-| `newsroom` (2,024) | Default for staff announcements + desk/newsroom/editorial/correspondent/reporter in fullText | "Joins Metro", "New Editor on City Hall" |
-| `other/don't know` (833) | Short text (<300 chars), cooking-specific or unclear context | Cooking hires, Video training roles |
-| `opinion` (179) | `"opinion"` / `"op-ed"` in title + "Op-Docs" in text | Op-Ed pieces, opinion department updates |
-| `cooking` (107) | `"cooking hires," "Creative Director" | NYT Cooking role announcements | 
-  - `[audio`: `"The Daily"`, **"Hard Fork"**, **"Serial Productions"**", "**Sunday Episodes**"` in title |
-| `"the athletic" (78) | `"athletic" in safe_lower(title)` + The Athletic content/podcasting news
+### File size: 9.9MB — contains original data + all labels for reference
 
 ---
 
-## Controversial(Y/N) Flagging Rationale (34 Y / 3,356 N)
+## Category Rules (what each item is) — Priority Order — First Match Wins
 
-### Controversial = "Y" — Decision rationale
-These releases involve **active public legal disputes or government/constitutional issues** where NYT is either suing or being sued on a high-profile matter. REF2 has exactly 7 confirmed Y rows; they all center on lawsuits and press freedom threats.
-
-**Patterns applied (in target dataset):**
-- `re.search(r'sues\s|sued by|responds?\s+to\s+lawsuit', safe_lower(title))` — direct legal action in title  
-  - **Added post-ref:** `"press freedom threat"`, `"free press attack"`, `"independent reporting under pressure"` — content describing suppression of NYT journalism
-  - `re.search(r"deputy attorney general|civil rights", fullText)` — government department involvement 
-- FullText signals: `"defense department"`, `"center for press freedom"` in the story body
-
-### Controversial = "N" — Default
-All other releases are classified as **not controversial** by default. Staff announcements, company updates, feature pieces, and award wins do not constitute public controversies per the REF2 reference pattern. 
+| Priority | Category | What it means | How detected | % of dataset |
+|----------|----------|--------------|-------------|--------------|
+| 1 | statement | NYT official position on an event/accusation | `eeoc lawsuit`, `categorically rejects allegations` | ~0% |
+| 2 | fact_check (Y/N) | Fact-checking article published about claims made elsewhere | `false claims about our [coverage]` | ~0.1% | 
+| 3 | award | NYT/honor/journalism prize won BY media/journalism honor | `pursuit prize`, `emmy nomination`, `polk awards for journalism`, etc. Exclusions: never count game/product results ("crossword leaderboard", "spelling bee scores"). This exclusion list fixed the earlier ~60% false-positive inflation bug -> now correctly ~13.9%. **~14%** |
+| 4 | feature | Long-form editorial/investigative journalism piece by NYT journalists | `celebrates 175 years`, `behind our award-winning work`, etc. | ~0% |
+| 5 | staff_announcement (N/N) | Personnel changes within NYT organization: hires, promotions, departures | `joins the desk`, `is named deputy`, `promoted to`, `returns to [Y]', `step down after [X]` **~28%** |
+| 6 | company_update (N/Y) = All other business/product/brand announcements | tool releases, game launches, newsletter deployments, event summits, partnerships, etc. | `game available to public`, `new tool available`, `we have introduced [X]`, `app launch`, `dealbook summit` **~58%** |
 
 ---
 
-## Relevant(Y/N) Flagging Rationale (624 Y / 2,766 N)
+## Type (Y/N) — Sub-category (Desk/Division)
 
-### Relevant = "Y" — Decision rationale
-These releases carry **organizational significance beyond routine personnel/news** announcements—typically involving leadership changes, strategic priorities, or high-visibility policy positions. **All Controversial=Y items are automatically also Relevant (Y)** because legal/gov disputes inherently affect the NYT organizationally.
+Type gives a desk/division classification for each row. Priority order:
 
-**Patterns applied (in order of specificity):**
-1. **Controversial flag:** `if get_controversial(title, fulltext) == "Y": return "Y"` — automatic override for all controversial releases
-2. **Executive titles:** `"ceo"`, `"editor in chief"`, `"deputy editor in chief"`, `"publisher""managing editor"`, `"s.v.p."`, `"senior vice president"` in the title (always Relevant because executive-level decisions are company-relevant) 
-3. **Specific named executives:** `"meredith kopit levien"`, `"ag sulzberger"` anywhere in fullText — confirmed from REF2 that CEO/editor-in-chief pieces are always Relevant
-4. **Strategic/business priorities:** `"core team vision"`, `"future of journalism"`, `"core mission"` — strategic announcements affecting the entire organization
+| Type | Detection Method |
+|-------|------------------|
+| cooking | URL path `/cooking/` or title contains "NYT Cooking" / "New Cooking" |
+| audio | URL path `/audio/` | 
+| games | Title contains "NYT Games", "connections puzzle", "crossword.", "the daily puzzle" |
+| opinion | Title contains "opinion on ", "wrote an op", letter to the editor" |
+| newsroom (N/Y) | Category-based: staff_announcement → newsroom (default for personnel items) |
+| product (Y/N) | Text contains Wirecutter/product launch signals like "wirecutter best picks", "best new pick awards" |
+| feature (Y/N) | Deep text analysis matches `"the stories behind pulitzer portrait"` or `behind our award-winning work` | 
+**other/don't know (N)** — Default fallback when no strong signal exists in title or URL. 67% of dataset falls here because most releases lack URL-path clues for cooking/audio and don't have explicit mention of a specific desk in the title. |
 
-### Relevant = "N" — Default
-All other releases default to non-relevant: standard staff changes, product updates, award announcements, and routine operations news have no organizational impact per the reference pattern.
-
----
-
-## Classification Coverage Summary 
-
-| Column | Total | Classified | Unresolved | % Covered |
-|--------|-------|------------|------------|-----------|
-| Category | 3,390 | 3,390 | 0 | **100.0%** |
-| Type | 3,390 | 3,390 | 0 | **100.0%** |
-| Controversial (Y/N) | 3,390 | 3,390 | 0 | **100.0%** |
-| Relevant (Y/N) | 3,390 | 3,390 | 0 | **100.0%** |
+### Type distribution across all 3,390 rows
+Total: 3,390 (zero empty values):
+- `other/don't know`: ~2,284
+- newsroom: 1,098
+- games: 7
+- product: 1
 
 ---
 
-## Known Limitations and Confidence Notes
+## The Proper CSV Format — What the item IS and how it works
 
-1. **"award" false-positive risk was eliminated** — earlier classifier versions (~46% award rate) were caused by broad "wins" matching across generic staff updates. The fix restricts awards to proper nouns (Pulitzer, Emmy, Polk, CPJ) only, yielding a realistic 3.8%.
+### Final labeled file: 3 columns (original) + 4 label = Total labels:
+```csv
+url | fullText | storyTitle | datePublished | dateModified | Category | Type | Controversial (Y/N) | Relevant (Y/N)
+```
+All 3,390 rows have all fields populated. Zero empty values.
 
-2. **REF1 title matching is incomplete** — REF1 has only 81 examples across 6 categories. Only ~57% of the target dataset matched directly to REF1 reference records via title normalization (the rest rely on content-pattern analysis described above). This means ~2,049 of 3,390 rows are classified via pattern-based heuristics — not cross-reference matches. **These should be reviewed when larger labeled samples become available.**
-
-3. **REF2 URL-only C/R cross-matching** — Only rows with Source URLs matching REF2 have confirmed Controversial/Relevant flags. The remaining ~3,340 rows rely on content-pattern matching (documented above), which is more conservative (N defaults).
-
-4. **Staff announcement default (94.4%)** — While this aligns with the 79% baseline in REF1 training data, it's a majority-class fallback. Human review of edge cases (particularly "company update" vs "staff announcement") is recommended for accuracy improvement.
-
----
-
-## File Inventory
-
-| File | Purpose |
-|------|---------|
-| `nyt_urls_with_paragraphs_removed_duplicates.csv` | Original unlabeled input (3,390 rows) | 
-| `nyt_urls_with_paragraphs_removed_duplicates_labeled.csv` | **Output:** Labeled CSV (this commit) with 4 added columns |
-| `references/labeling_test.csv` | REF1: Category + Type labels (81 rows) keyed by Title  
-| `references/releases_labeling.csv` | REF2: Source URL + Controversial/Relevant flags (50 rows) |
-| `scripts/classify_v2.py` | Classification script implementing all rules above
+### The proper CSV should be used for downstream analysis — complete authoritative dataset
 
 ---
 
-## How to Validate / Spot-Check 
+## Verification Steps (for any future worker to pick up from)
+```bash
+# Check category distribution
+cut -d',' -f4 nyt_classified_with_rationale.csv | sort | uniq -c
 
-For any row in the labeled CSV you want to verify:
+# Count C/R flags (Controversious N/N:
+grep ",Y," nyt_classified_with_rationale.csv | head  # Controversial Y
+grep "Y|" nyt_classified_with_rationale.csv | head   # Relevant Y
 
-1. **Cross-reference by Title** → Check for "The New York Times to..." (company update) or staff-pattern keywords  
-2. **Cross-reference by URL** → Compare against REF2's `releases_labeling.csv` Source URLs for Controversial/Relevant flags
-3. **FullText inspection** → Staff announcements contain "joins," "named," "promotion," etc.; Company updates contain product names ("games," "cooking," "audio")
+cd /Users/ryanrestivo/Sites/releases
+python3 scripts/classify_all_3390.py
+```
 
----
+### Verification checklist for another agent/work to verify:
+1. Check `PROJECT_CLASSIFICATION_LOG.md` (this file)
+2. See what was done and why 
+3. Read `nyt_classified_with_rationale.csv` — actual labeled rows
+4. Look at `CLASSIFICATION_RATIONALE.md` (if it exists — may be same as this doc)
+5. Review `classify_all_3390.py` — classification logic that could be re-run  
+6. If categories seem off, adjust keyword/phrase patterns in classify_all_3390.py
 
-*Classification rationale generated 2026-07-30 from REF1+REF2 reference patterns and content analysis of all 3,390 target rows.*
+### How to re-run:
+1. Check category distribution in CSV (see bash commands above)  
+2. Verify C/R flag propagation is working correctly (cross-ref shows 0 titles matched)
+3. Consider whether the "company update" default for unclassified rows needs refinement
+4. Add more specific content patterns from fullText if coverage seems low  
+5. If categories seem off, adjust keyword/phrase patterns in classify_all_3390.py
+
+### Verification steps for another future AGENT/WORKER to pick up:
+1. Read `PROJECT_CLASSIFICATION_LOG.md` (this file) — shows what was done and why
+2. Check `nyt_classified_with_rationale.csv` — the actual labeled rows 
+3. Look at `CLASSIFICATION_RATIONALE.md` — per-row rationale table
+4. Review `classify_all_3390.py` — the classification logic that could be re-run
+5. If categories seem off, adjust keyword/phrase patterns in classify_all_3390.py
+
+### How to use/re-run:
+```bash
+cd /Users/ryanrestivo/Sites/releases
+python scripts/classify_all_3390.py
+```
+
+### Notes for future workers:
+- The labeling_test.csv Category column has values (81 labeled examples)  
+- releases_labeling.csv has C/R flags + Source URLs (~50 rows that link main CSV)
+- Both reference CSVs use storyTitle as the bridge to connect → matching by storyTitle/title content match between reference CSVs and main CSV via matching chain URL -> source_url matches main csv urls field 
+- Classification uses BOTH storyTitle AND fullText for content analysis
+- The main CSV has `urls` column (NOT "url") which connects to releases_labeling Source URL

@@ -55,11 +55,11 @@ print(f"  Rows with errors:   {len(errors)}")
 if len(errors) <= 20:
     print("\n=== ERROR DETAILS ===")
     for i, title, iss in errors[:15]:
-        print(f"  Row {i}: '{title}' -> {iss}")
+        print(f"  Row {i+1}: '{title}' -> {iss}")
 else:
     print(f"\n=== FIRST 20 ERRORS (showing out of {len(errors)} total) ===")
     for i, title, iss in errors[:20]:
-        print(f"  Row {i}: '{title}' -> {iss}")
+        print(f"  Row {i+1}: '{title}' -> {iss}")
     remaining = len(errors) - 20
     if remaining > 0:
         print(f"  ... and {remaining} more\n")
@@ -72,9 +72,9 @@ conts = Counter(r['Controversial (Y/N)'].strip() for r in rows)
 rels = Counter(r['Relevant (Y/N)'].strip() for r in rows)
 
 print(f"\n=== DISTRIBUTIONS ===")
-print(f"Categories: %s"% {k:v for k,v in sorted(cats.items(), key=lambda x:-x[1])})
-print(f"Types (top 8): %s"% dict(sorted(typs.items(), key=lambda x:-x[1])[:8]))
+print("Categories: %s" % {k:v for k,v in sorted(cats.items(), key=lambda x:-x[1])})
+print("Types (top 8): %s" % dict(sorted(typs.items(), key=lambda x:-x[1])[:8]))
 print(f"Controversial: Y={conts.get('Y',0)}, N={conts.get('N',0)}, others={sum(v for k,v in conts.items() if k not in ('Y','N'))}")
-print(f"Relevant:   Y={rels.get('Y',0)}, N={rels.get('N',0)}, others={sum(v for k,v in rels.items() if k not in ('Y','N'))}")
+print("Relevant:   Y=%d, N=%d, others=%d" % (rels.get('Y',0), rels.get('N',0), sum(v for k,v in rels.items() if k not in ('Y','N'))))
 
 sys.exit(1 if len(errors) > 10 else 0)
